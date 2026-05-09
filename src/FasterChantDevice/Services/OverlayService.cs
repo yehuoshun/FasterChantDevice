@@ -142,11 +142,29 @@ public class OverlayService : IDisposable
 
     private static IntPtr GetGameWindowHandle()
     {
-        // Find 300 Heroes window by class/title
+        // Try exact title match first
         var hwnd = FindWindow(null, "300英雄");
-        if (hwnd == IntPtr.Zero)
-            hwnd = GetForegroundWindow();
-        return hwnd;
+        if (hwnd != IntPtr.Zero) return hwnd;
+
+        // Fallback: enumerate windows for partial match
+        var found = IntPtr.Zero;
+        EnumWindows((h, _) =>
+        {
+            var buf = new char[256];
+            GetWindowText(h, buf, buf.Length);
+            var t = new string(buf).TrimEnd('\0');
+            if (t.Contains("300英雄") && IsWindowVisible(h))
+            {
+                GetWindowRect(h, out var r);
+                if (r.Width > 800 && r.Height > 600)
+                    found = h;
+            }
+            return found == IntPtr.Zero;
+        }, IntPtr.Zero);
+        if (found != IntPtr.Zero) return found;
+
+        // Last resort: foreground window
+        return GetForegroundWindow();
     }
 
     private void PositionOverWindow(IntPtr targetHwnd)
@@ -184,6 +202,17 @@ public class OverlayService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowText(IntPtr hWnd, char[] text, int count);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT

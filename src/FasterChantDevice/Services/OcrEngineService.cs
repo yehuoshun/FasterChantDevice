@@ -69,31 +69,24 @@ public class OcrEngineService : IDisposable
 
         _lastHwndCheck = DateTime.UtcNow;
 
-        // Try exact title match
-        var hwnd = FindWindow(null, "300英雄");
-        if (hwnd != IntPtr.Zero)
-        {
-            _cachedGameHwnd = hwnd;
-            return hwnd;
-        }
-
-        // Try partial match by enumerating windows
+        // Enumerate windows looking for title containing "300英雄"
+        var foundHwnd = IntPtr.Zero;
         EnumWindows((h, _) =>
         {
             var title = new char[256];
             GetWindowText(h, title, title.Length);
             var t = new string(title).TrimEnd('\0');
-            if (t.Contains("300") && !t.Contains("FasterChant") && IsWindowVisible(h))
+            if (t.Contains("300英雄") && !t.Contains("FasterChant") && IsWindowVisible(h))
             {
                 GetWindowRect(h, out var rect);
                 if (rect.Width > 800 && rect.Height > 600)
-                    hwnd = h;
+                    foundHwnd = h;
             }
-            return hwnd == IntPtr.Zero;
+            return foundHwnd == IntPtr.Zero;
         }, IntPtr.Zero);
 
-        _cachedGameHwnd = hwnd;
-        return hwnd;
+        _cachedGameHwnd = foundHwnd;
+        return foundHwnd;
     }
 
     public bool IsGameForeground()
