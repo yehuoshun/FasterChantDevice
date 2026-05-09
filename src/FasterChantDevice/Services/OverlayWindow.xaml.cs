@@ -37,7 +37,7 @@ public partial class OverlayWindow : Window
         });
     }
 
-    protected override void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(System.Windows.Input.KeyEventArgs e)
     {
         base.OnKeyDown(e);
 
