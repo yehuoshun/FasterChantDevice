@@ -34,9 +34,25 @@ public class OcrEngineService : IDisposable
     /// </summary>
     public async Task InitializeAsync()
     {
-        // Try Chinese (simplified) first, fall back to first available
-        _engine = OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("zh-Hans"))
-                  ?? OcrEngine.TryCreateFromUserProfileLanguages();
+        // Try Chinese (simplified) first, fall back to user profile languages
+        var chsEngine = OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("zh-Hans"));
+        if (chsEngine != null)
+        {
+            _engine = chsEngine;
+        }
+        else
+        {
+            _engine = OcrEngine.TryCreateFromUserProfileLanguages();
+            if (_engine != null)
+            {
+                Debug.WriteLine("[OCR] Chinese (zh-Hans) OCR not available, " +
+                    "falling back to system language. Chinese character recognition may be degraded.");
+            }
+            else
+            {
+                Debug.WriteLine("[OCR] No OCR engine available. Game event detection disabled.");
+            }
+        }
     }
 
     /// <summary>

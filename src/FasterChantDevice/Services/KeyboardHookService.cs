@@ -22,6 +22,7 @@ public class KeyboardHookService : IDisposable
     private readonly LowLevelKeyboardProc _proc;
     private Thread? _hookThread;
     private volatile bool _running;
+    private volatile bool _stopPump;
 
     public event Action<Key>? KeyDown;
     public event Action<Key>? KeyUp;
@@ -54,7 +55,7 @@ public class KeyboardHookService : IDisposable
         _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, moduleHandle, 0);
 
         // Message pump
-        while (_running)
+        while (_running && !_stopPump)
         {
             // PeekMessage + minimal wait to avoid 100% CPU
             if (PeekMessage(out var msg, IntPtr.Zero, 0, 0, 1))
@@ -85,6 +86,8 @@ public class KeyboardHookService : IDisposable
                 KeyUp?.Invoke(key);
         }
 
+        // Safe: watchdog ensures old thread is fully stopped before new one
+        // registers, so _hookId is never accessed concurrently.
         return CallNextHookEx(_hookId, nCode, wParam, lParam);
     }
 
@@ -96,6 +99,12 @@ public class KeyboardHookService : IDisposable
             if (_hookId == IntPtr.Zero && _running)
             {
                 Debug.WriteLine("Hook lost, re-registering...");
+
+                // Stop old message pump thread before restarting
+                _stopPump = true;
+                _hookThread?.Join(2000);
+                _stopPump = false;
+
                 // Restart the hook thread
                 _hookThread = new Thread(RunMessageLoop)
                 {

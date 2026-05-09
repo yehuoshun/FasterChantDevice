@@ -1,47 +1,37 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
 
 namespace FasterChantDevice.Services;
 
 /// <summary>
 /// Simulates keyboard input via SendInput.
-/// Sends text by copying to clipboard then simulating Ctrl+V + Enter.
+/// Uses KEYEVENTF_UNICODE to send characters directly — no clipboard involvement.
 /// </summary>
 public class InputSimulationService
 {
     private const int INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_KEYUP = 0x0002;
+    private const uint KEYEVENTF_UNICODE = 0x0004;
 
     public void SendText(string text)
     {
         if (string.IsNullOrEmpty(text)) return;
 
-        // Save current clipboard
-        var oldClipboard = Clipboard.GetText();
-
-        // Set text to clipboard
-        Clipboard.SetText(text);
-
-        // Simulate: Enter → Ctrl+V → Enter
+        // Open chat: Enter
         SimulateEnter();
         Thread.Sleep(50);
-        SimulateCtrlV();
-        Thread.Sleep(50);
-        SimulateEnter();
 
-        // Restore clipboard after a short delay
-        _ = Task.Run(async () =>
+        // Send each character via Unicode input (no clipboard needed)
+        foreach (char c in text)
         {
-            await Task.Delay(200);
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                if (!string.IsNullOrEmpty(oldClipboard))
-                    Clipboard.SetText(oldClipboard);
-            });
-        });
+            SendUnicodeChar(c);
+            Thread.Sleep(1);
+        }
+
+        Thread.Sleep(50);
+        // Confirm: Enter
+        SimulateEnter();
     }
 
     public void SendLinesSequentially(string[] lines, int intervalMs, CancellationToken ct = default)
@@ -59,23 +49,40 @@ public class InputSimulationService
     private static void SimulateEnter() =>
         SimulateKey(0x0D); // VK_RETURN
 
-    private static void SimulateCtrlV()
+    private static void SendUnicodeChar(char c)
     {
-        // Press Ctrl
-        var ctrlDown = CreateKeyboardInput(0x11, false);
-        SendInput(1, new[] { ctrlDown }, Marshal.SizeOf<INPUT>());
-
-        // Press V
-        var vDown = CreateKeyboardInput(0x56, false);
-        SendInput(1, new[] { vDown }, Marshal.SizeOf<INPUT>());
-
-        // Release V
-        var vUp = CreateKeyboardInput(0x56, true);
-        SendInput(1, new[] { vUp }, Marshal.SizeOf<INPUT>());
-
-        // Release Ctrl
-        var ctrlUp = CreateKeyboardInput(0x11, true);
-        SendInput(1, new[] { ctrlUp }, Marshal.SizeOf<INPUT>());
+        var down = new INPUT
+        {
+            type = INPUT_KEYBOARD,
+            u = new InputUnion
+            {
+                ki = new KEYBDINPUT
+                {
+                    wVk = 0,
+                    wScan = c,
+                    dwFlags = KEYEVENTF_UNICODE,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero
+                }
+            }
+        };
+        var up = new INPUT
+        {
+            type = INPUT_KEYBOARD,
+            u = new InputUnion
+            {
+                ki = new KEYBDINPUT
+                {
+                    wVk = 0,
+                    wScan = c,
+                    dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero
+                }
+            }
+        };
+        var inputs = new[] { down, up };
+        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
     }
 
     private static void SimulateKey(ushort vkCode)

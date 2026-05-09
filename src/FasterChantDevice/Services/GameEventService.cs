@@ -40,6 +40,8 @@ public class GameEventService : IDisposable
     // Combat timestamps for taunt cooldown
     private DateTime _lastCombatEvent = DateTime.MinValue;
     private DateTime _lastTaunt = DateTime.MinValue;
+    private DateTime _lastManualTaunt = DateTime.MinValue;
+    private const int ManualTauntCooldownS = 10;
 
     public GameEventService(SchemeManager schemeManager, InputSimulationService input)
     {
@@ -59,7 +61,11 @@ public class GameEventService : IDisposable
 
     public void Start()
     {
-        _ = StartAsync(); // fire-and-forget for backwards compat
+        _ = StartAsync().ContinueWith(t =>
+        {
+            if (t.Exception != null)
+                Debug.WriteLine($"[GameEvent] StartAsync failed: {t.Exception.InnerException?.Message}");
+        }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private async Task MonitorLoop()
@@ -80,57 +86,70 @@ public class GameEventService : IDisposable
                 // ——— K/D/A check (every 500ms) ———
                 var (kills, deaths, assists) = await _ocr.ReadKDACounter();
 
-                // Detect new game: K/D/A reset from non-zero to 0/0/0
-                if (kills == 0 && deaths == 0 && assists == 0 &&
-                    (_prevKills > 0 || _prevDeaths > 0 || _prevAssists > 0) &&
-                    !_gameStarted)
+                // Only process if OCR returned valid data
+                bool ocrValid = kills >= 0 && deaths >= 0 && assists >= 0;
+
+                if (ocrValid)
                 {
-                    _gameStarted = true;
-                    Debug.WriteLine("[GameEvent] New game detected");
-                    await TriggerEvent("game_start");
+                    // Game start: detect KDA reset from non-zero to all-zero.
+                    // Handles both first game and consecutive matches without tabbing out.
+                    if (kills == 0 && deaths == 0 && assists == 0 &&
+                        _prevKills >= 0 && _prevDeaths >= 0 && _prevAssists >= 0)
+                    {
+                        if (_prevKills > 0 || _prevDeaths > 0 || _prevAssists > 0)
+                        {
+                            // Match ended, new one starting
+                            _gameStarted = false;
+                        }
+
+                        if (!_gameStarted)
+                        {
+                            _gameStarted = true;
+                            Debug.WriteLine("[GameEvent] New game detected");
+                            await TriggerEvent("game_start");
+                        }
+                    }
+
+                    // Detect individual KDA changes
+                    if (_prevKills >= 0 && _prevDeaths >= 0 && _prevAssists >= 0)
+                    {
+                        if (kills > _prevKills)
+                        {
+                            Debug.WriteLine($"[GameEvent] Kill detected ({_prevKills} → {kills})");
+                            // Broadcast OCR for debug confirmation (KDA counter is authoritative)
+                            var broadcast = await _ocr.ReadBroadcastText();
+                            Debug.WriteLine($"[GameEvent] Kill broadcast: '{broadcast}'");
+                            await TriggerEvent("kill");
+                        }
+                        if (deaths > _prevDeaths)
+                        {
+                            Debug.WriteLine($"[GameEvent] Death detected ({_prevDeaths} → {deaths})");
+                            await TriggerEvent("death");
+                        }
+                        if (assists > _prevAssists)
+                        {
+                            Debug.WriteLine($"[GameEvent] Assist detected ({_prevAssists} → {assists})");
+                            await TriggerEvent("assist");
+                        }
+                    }
+
+                    // Store current frame for pixel change comparison
+                    var newFrame = _ocr.CaptureBroadcastFrame();
+                    if (_prevBroadcastFrame.Length > 0 && newFrame.Length > 0)
+                    {
+                        if (_ocr.HasPixelChange(_prevBroadcastFrame) &&
+                            kills == _prevKills && deaths == _prevDeaths && assists == _prevAssists)
+                        {
+                            // Pixel changed but KDA didn't — non-lethal event, ignore
+                        }
+                    }
+                    _prevBroadcastFrame = newFrame;
+
+                    // Only update prev values on successful OCR
+                    _prevKills = kills;
+                    _prevDeaths = deaths;
+                    _prevAssists = assists;
                 }
-
-                // Detect individual changes
-                if (_prevKills >= 0 && _prevDeaths >= 0 && _prevAssists >= 0)
-                {
-                    if (kills > _prevKills)
-                    {
-                        Debug.WriteLine($"[GameEvent] Kill detected ({_prevKills} → {kills})");
-
-                        // Try to confirm via broadcast OCR
-                        var broadcast = await _ocr.ReadBroadcastText();
-                        var isDeath = broadcast.Contains("你被") || broadcast.Contains("击杀") && broadcast.Contains("你");
-
-                        await TriggerEvent("kill");
-                    }
-                    if (deaths > _prevDeaths)
-                    {
-                        Debug.WriteLine($"[GameEvent] Death detected ({_prevDeaths} → {deaths})");
-                        await TriggerEvent("death");
-                    }
-                    if (assists > _prevAssists)
-                    {
-                        Debug.WriteLine($"[GameEvent] Assist detected ({_prevAssists} → {assists})");
-                        await TriggerEvent("assist");
-                    }
-                }
-
-                // Store current frame for pixel change comparison
-                var newFrame = _ocr.CaptureBroadcastFrame();
-                if (_prevBroadcastFrame.Length > 0 && newFrame.Length > 0)
-                {
-                    // If we missed a KDA change but broadcast changed, try to catch it
-                    if (_ocr.HasPixelChange(_prevBroadcastFrame) &&
-                        kills == _prevKills && deaths == _prevDeaths && assists == _prevAssists)
-                    {
-                        // Pixel changed but KDA didn't — could be a non-lethal event, ignore
-                    }
-                }
-                _prevBroadcastFrame = newFrame;
-
-                _prevKills = kills;
-                _prevDeaths = deaths;
-                _prevAssists = assists;
 
                 // ——— Taunt timer ———
                 await CheckTauntTimer();
@@ -216,6 +235,13 @@ public class GameEventService : IDisposable
 
     public void ManualTaunt()
     {
+        // 10s cooldown on manual taunt to prevent spam
+        if ((DateTime.UtcNow - _lastManualTaunt).TotalSeconds < ManualTauntCooldownS)
+        {
+            Debug.WriteLine($"[GameEvent] Manual taunt on cooldown ({ManualTauntCooldownS}s), ignored");
+            return;
+        }
+        _lastManualTaunt = DateTime.UtcNow;
         _ = TriggerTaunt();
     }
 

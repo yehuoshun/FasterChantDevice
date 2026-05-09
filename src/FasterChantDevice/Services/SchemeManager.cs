@@ -64,7 +64,10 @@ public class SchemeManager
                 var hero = JsonSerializer.Deserialize<HeroScheme>(json);
                 if (hero != null) Heroes.Add(hero);
             }
-            catch { /* skip corrupt files */ }
+            catch (JsonException)
+            {
+                // Corrupt JSON — skip this file, it will be overwritten on next save
+            }
         }
     }
 
@@ -75,12 +78,23 @@ public class SchemeManager
         var json = JsonSerializer.Serialize(hero, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(path, json);
 
-        // Update in-memory list
-        var idx = Heroes.FindIndex(h => h.Name == hero.Name);
-        if (idx >= 0)
+        // Update in-memory list — delete old file if name changed
+        var existing = Heroes.FirstOrDefault(h => h.Name == hero.Name);
+        if (existing != null)
+        {
+            var oldSafeName = SanitizeFileName(existing.Name);
+            if (oldSafeName != safeName)
+            {
+                var oldPath = Path.Combine(_dataDir, "heroes", $"{oldSafeName}.json");
+                if (File.Exists(oldPath)) File.Delete(oldPath);
+            }
+            var idx = Heroes.IndexOf(existing);
             Heroes[idx] = hero;
+        }
         else
+        {
             Heroes.Add(hero);
+        }
     }
 
     public void DeleteHero(string name)

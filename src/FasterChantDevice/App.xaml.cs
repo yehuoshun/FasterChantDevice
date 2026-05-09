@@ -50,24 +50,10 @@ public partial class App : Application
         {
             Dispatcher.Invoke(() => _overlay?.Toggle());
         }
-        // F2 → manual taunt
+        // F2 → manual taunt (cooldown enforced inside GameEventService)
         else if (key == Key.F2)
         {
             _gameEvent?.ManualTaunt();
-            // Trigger taunt via overlay or directly
-            var hero = _schemeManager?.Heroes.FirstOrDefault();
-            if (hero != null && _schemeManager != null)
-            {
-                var lines = _schemeManager.PickTauntLines(hero);
-                if (lines.Length > 0)
-                {
-                    if (_schemeManager.Settings.BurstMode)
-                        _ = Task.Run(() => _inputSim!.SendLinesSequentially(
-                            lines, _schemeManager.Settings.BurstIntervalMs));
-                    else
-                        _inputSim!.SendText(lines[0]);
-                }
-            }
         }
     }
 

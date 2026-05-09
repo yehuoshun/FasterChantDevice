@@ -72,17 +72,37 @@ public class OverlayService : IDisposable
 
         if (_currentPanelIndex == -1)
         {
-            // Main panel: number selects group
+            // Main panel: number selects group → show its lines (secondary view)
             if (numberKey >= 0 && numberKey < hero.Panels.Count)
             {
                 _currentGroupIndex = numberKey;
+                _currentPanelIndex = numberKey;
                 var panel = hero.Panels[numberKey];
                 if (panel.Lines.Count > 0)
                 {
-                    ExecutePanel(panel, hero);
-                    if (!_schemeManager.Settings.BurstMode)
+                    UpdateSecondaryContent(panel);
+                }
+            }
+        }
+        else
+        {
+            // Secondary panel: number selects which line to send
+            if (_currentGroupIndex >= 0 && _currentGroupIndex < hero.Panels.Count)
+            {
+                var panel = hero.Panels[_currentGroupIndex];
+                if (numberKey >= 0 && numberKey < panel.Lines.Count)
+                {
+                    if (_schemeManager.Settings.BurstMode)
                     {
-                        // Single send → close overlay
+                        var lines = _schemeManager.PickLines(panel.Lines);
+                        _burstCts?.Cancel();
+                        _burstCts = new CancellationTokenSource();
+                        _ = Task.Run(() => _input.SendLinesSequentially(lines,
+                            _schemeManager.Settings.BurstIntervalMs, _burstCts.Token));
+                    }
+                    else
+                    {
+                        _input.SendText(panel.Lines[numberKey]);
                         Hide();
                         return;
                     }
@@ -91,23 +111,7 @@ public class OverlayService : IDisposable
         }
     }
 
-    private void ExecutePanel(Models.PhrasePanel panel, Models.HeroScheme hero)
-    {
-        var lines = _schemeManager.PickLines(panel.Lines);
 
-        if (_schemeManager.Settings.BurstMode)
-        {
-            _burstCts?.Cancel();
-            _burstCts = new CancellationTokenSource();
-            var ct = _burstCts.Token;
-            _ = Task.Run(() => _input.SendLinesSequentially(lines,
-                _schemeManager.Settings.BurstIntervalMs, ct));
-        }
-        else if (lines.Length > 0)
-        {
-            _input.SendText(lines[0]);
-        }
-    }
 
     private void UpdateOverlayContent()
     {
@@ -122,6 +126,13 @@ public class OverlayService : IDisposable
 
         var names = hero.Panels.Select(p => p.Name).ToArray();
         _window.SetContent(names, Array.Empty<string>());
+    }
+
+    private void UpdateSecondaryContent(PhrasePanel panel)
+    {
+        if (_window == null) return;
+        var lines = panel.Lines.Select((l, i) => $"{i}. {l}").ToArray();
+        _window.SetContent(lines, Array.Empty<string>());
     }
 
     private static IntPtr GetGameWindowHandle()
@@ -140,10 +151,14 @@ public class OverlayService : IDisposable
         GetWindowRect(targetHwnd, out var rect);
         var helper = new WindowInteropHelper(_window);
 
-        // Position overlay on left side of game window
-        _window.Left = rect.Left + 20;
-        _window.Top = rect.Top + 100;
-        _window.Height = rect.Bottom - rect.Top - 200;
+        // Convert physical pixels to WPF device-independent units for high-DPI
+        var dpi = GetDpiForWindow(targetHwnd);
+        if (dpi == 0) dpi = 96;
+        var scale = dpi / 96.0;
+
+        _window.Left = rect.Left / scale + 20;
+        _window.Top = rect.Top / scale + 100;
+        _window.Height = Math.Max(100, (rect.Bottom - rect.Top) / scale - 200);
     }
 
     public void Dispose()
@@ -161,6 +176,9 @@ public class OverlayService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT
