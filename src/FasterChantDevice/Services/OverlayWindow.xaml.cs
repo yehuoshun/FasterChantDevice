@@ -14,26 +14,14 @@ public partial class OverlayWindow : Window
         Loaded += (_, _) => MakeClickThrough();
     }
 
-    public void SetContent(string[] mainItems, string[] subItems)
+    public void SetContent(string[] items)
     {
         Dispatcher.Invoke(() =>
         {
-            if (subItems.Length > 0)
-            {
-                // Show secondary panel items with numbers
-                var items = new List<string>();
-                for (int i = 0; i < subItems.Length && i < 10; i++)
-                    items.Add($"{i}. {subItems[i]}");
-                ContentList.ItemsSource = items;
-            }
-            else
-            {
-                // Show main panel groups with numbers
-                var items = new List<string>();
-                for (int i = 0; i < mainItems.Length && i < 10; i++)
-                    items.Add($"{i}. {mainItems[i]}");
-                ContentList.ItemsSource = items;
-            }
+            var displayItems = new List<string>();
+            for (int i = 0; i < items.Length && i < 10; i++)
+                displayItems.Add($"{i}. {items[i]}");
+            ContentList.ItemsSource = displayItems;
         });
     }
 

@@ -18,8 +18,8 @@ public class InputSimulationService
     {
         if (string.IsNullOrEmpty(text)) return;
 
-        // Open chat: Enter
-        SimulateEnter();
+        // Open chat: Shift+Enter (300 Heroes chat key)
+        SimulateShiftEnter();
         Thread.Sleep(50);
 
         // Send each character via Unicode input (no clipboard needed)
@@ -30,7 +30,7 @@ public class InputSimulationService
         }
 
         Thread.Sleep(50);
-        // Confirm: Enter
+        // Confirm send: Enter
         SimulateEnter();
     }
 
@@ -46,8 +46,30 @@ public class InputSimulationService
         }
     }
 
+    private static void SimulateShiftEnter()
+    {
+        // Shift down
+        var shiftDown = CreateKeyboardInput(VK_SHIFT, false);
+        SendInput(1, new[] { shiftDown }, Marshal.SizeOf<INPUT>());
+
+        // Enter down
+        var enterDown = CreateKeyboardInput(VK_RETURN, false);
+        SendInput(1, new[] { enterDown }, Marshal.SizeOf<INPUT>());
+
+        // Enter up
+        var enterUp = CreateKeyboardInput(VK_RETURN, true);
+        SendInput(1, new[] { enterUp }, Marshal.SizeOf<INPUT>());
+
+        // Shift up
+        var shiftUp = CreateKeyboardInput(VK_SHIFT, true);
+        SendInput(1, new[] { shiftUp }, Marshal.SizeOf<INPUT>());
+    }
+
+    private const ushort VK_SHIFT = 0x10;
+    private const ushort VK_RETURN = 0x0D;
+
     private static void SimulateEnter() =>
-        SimulateKey(0x0D); // VK_RETURN
+        SimulateKey(VK_RETURN);
 
     private static void SendUnicodeChar(char c)
     {

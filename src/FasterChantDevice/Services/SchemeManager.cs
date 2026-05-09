@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -68,12 +69,21 @@ public class SchemeManager
             {
                 // Corrupt JSON — skip this file, it will be overwritten on next save
             }
+            catch (IOException ex)
+            {
+                Debug.WriteLine($"[SchemeManager] Failed to read hero file {file}: {ex.Message}");
+            }
         }
     }
 
     public void SaveHero(HeroScheme hero)
     {
         var safeName = SanitizeFileName(hero.Name);
+        if (string.IsNullOrWhiteSpace(safeName))
+        {
+            Debug.WriteLine($"[SchemeManager] Cannot save hero with empty/invalid name");
+            return;
+        }
         var path = Path.Combine(_dataDir, "heroes", $"{safeName}.json");
         var json = JsonSerializer.Serialize(hero, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(path, json);

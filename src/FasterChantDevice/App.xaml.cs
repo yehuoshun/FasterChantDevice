@@ -53,7 +53,16 @@ public partial class App : Application
         // F2 → manual taunt (cooldown enforced inside GameEventService)
         else if (key == Key.F2)
         {
-            _gameEvent?.ManualTaunt();
+            // Marshal to UI thread — GameEventService shares state with WPF
+            Dispatcher.Invoke(() => _gameEvent?.ManualTaunt());
+        }
+        // Number keys 0-9 → route to overlay when visible
+        else if (_overlay?.IsVisible == true)
+        {
+            if (key >= Key.D0 && key <= Key.D9)
+                Dispatcher.Invoke(() => _overlay.HandleNumberKey(key - Key.D0));
+            else if (key >= Key.NumPad0 && key <= Key.NumPad9)
+                Dispatcher.Invoke(() => _overlay.HandleNumberKey(key - Key.NumPad0));
         }
     }
 

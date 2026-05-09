@@ -26,6 +26,11 @@ public class OverlayService : IDisposable
 
     public bool IsVisible => _visible;
 
+    /// <summary>
+    /// Handle number key from global keyboard hook. Public entry point for App.OnGlobalKeyDown.
+    /// </summary>
+    public void HandleNumberKey(int numberKey) => OnOverlayKeyPressed(numberKey);
+
     public OverlayService(SchemeManager schemeManager, InputSimulationService input)
     {
         _schemeManager = schemeManager;
@@ -120,19 +125,19 @@ public class OverlayService : IDisposable
         var hero = _schemeManager.Heroes.FirstOrDefault();
         if (hero == null)
         {
-            _window.SetContent(new[] { "无英雄方案" }, Array.Empty<string>());
+            _window.SetContent(new[] { "无英雄方案" });
             return;
         }
 
         var names = hero.Panels.Select(p => p.Name).ToArray();
-        _window.SetContent(names, Array.Empty<string>());
+        _window.SetContent(names);
     }
 
     private void UpdateSecondaryContent(PhrasePanel panel)
     {
         if (_window == null) return;
         var lines = panel.Lines.Select((l, i) => $"{i}. {l}").ToArray();
-        _window.SetContent(lines, Array.Empty<string>());
+        _window.SetContent(lines);
     }
 
     private static IntPtr GetGameWindowHandle()
