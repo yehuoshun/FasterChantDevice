@@ -43,9 +43,11 @@ public class InputSimulationService
 
             SendText(line);
 
-            // Cancellable wait (Thread.Sleep blocks cancellation)
-            if (intervalMs > 0)
-                ct.WaitHandle.WaitOne(intervalMs);
+            // Cancellable wait
+            int delay = Math.Max(0, intervalMs);
+            if (delay > 0)
+                ct.WaitHandle.WaitOne(delay);
+            // When intervalMs is 0, still check cancellation between lines
         }
     }
 

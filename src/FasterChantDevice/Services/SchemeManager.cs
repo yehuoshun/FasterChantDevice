@@ -4,16 +4,19 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using FasterChantDevice.Models;
 
 namespace FasterChantDevice.Services;
 
 /// <summary>
 /// Manages loading/saving hero schemes and global settings as JSON files.
+/// Thread-safe: uses ReaderWriterLockSlim for Heroes/Settings access.
 /// </summary>
 public class SchemeManager
 {
     private readonly string _dataDir;
+    private readonly ReaderWriterLockSlim _lock = new();
 
     public AppSettings Settings { get; private set; } = new();
     public List<HeroScheme> Heroes { get; private set; } = new();
@@ -47,7 +50,10 @@ public class SchemeManager
     public void SaveSettings()
     {
         var path = Path.Combine(_dataDir, "settings.json");
-        var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
+        string json;
+        _lock.EnterReadLock();
+        try { json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true }); }
+        finally { _lock.ExitReadLock(); }
         File.WriteAllText(path, json);
     }
 
@@ -88,23 +94,28 @@ public class SchemeManager
         var json = JsonSerializer.Serialize(hero, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(path, json);
 
-        // Update in-memory list — delete old file if name changed
-        var existing = Heroes.FirstOrDefault(h => h.Name == hero.Name);
-        if (existing != null)
+        _lock.EnterWriteLock();
+        try
         {
-            var oldSafeName = SanitizeFileName(existing.Name);
-            if (oldSafeName != safeName)
+            // Update in-memory list — delete old file if name changed
+            var existing = Heroes.FirstOrDefault(h => h.Name == hero.Name);
+            if (existing != null)
             {
-                var oldPath = Path.Combine(_dataDir, "heroes", $"{oldSafeName}.json");
-                if (File.Exists(oldPath)) File.Delete(oldPath);
+                var oldSafeName = SanitizeFileName(existing.Name);
+                if (oldSafeName != safeName)
+                {
+                    var oldPath = Path.Combine(_dataDir, "heroes", $"{oldSafeName}.json");
+                    if (File.Exists(oldPath)) File.Delete(oldPath);
+                }
+                var idx = Heroes.IndexOf(existing);
+                Heroes[idx] = hero;
             }
-            var idx = Heroes.IndexOf(existing);
-            Heroes[idx] = hero;
+            else
+            {
+                Heroes.Add(hero);
+            }
         }
-        else
-        {
-            Heroes.Add(hero);
-        }
+        finally { _lock.ExitWriteLock(); }
     }
 
     public void DeleteHero(string name)
@@ -112,11 +123,23 @@ public class SchemeManager
         var safeName = SanitizeFileName(name);
         var path = Path.Combine(_dataDir, "heroes", $"{safeName}.json");
         if (File.Exists(path)) File.Delete(path);
-        Heroes.RemoveAll(h => h.Name == name);
+        _lock.EnterWriteLock();
+        try { Heroes.RemoveAll(h => h.Name == name); }
+        finally { _lock.ExitWriteLock(); }
     }
 
-    public HeroScheme? GetHero(string name) =>
-        Heroes.FirstOrDefault(h => h.Name == name);
+    public HeroScheme? GetHero(string name)
+    {
+        _lock.EnterReadLock();
+        try { return Heroes.FirstOrDefault(h => h.Name == name); }
+        finally { _lock.ExitReadLock(); }
+    }
+
+    /// <summary>
+    /// Read-lock helpers for external callers that iterate Heroes or read Settings.
+    /// </summary>
+    public void EnterReadLock() => _lock.EnterReadLock();
+    public void ExitReadLock() => _lock.ExitReadLock();
 
     private static string SanitizeFileName(string name)
     {
@@ -132,13 +155,17 @@ public class SchemeManager
     public string[] PickLines(List<string> lines, Random? rng = null)
     {
         if (lines.Count == 0) return Array.Empty<string>();
-
         rng ??= Random.Shared;
 
-        if (Settings.BurstMode)
-            return lines.ToArray();
-        else
-            return new[] { lines[rng.Next(lines.Count)] };
+        _lock.EnterReadLock();
+        try
+        {
+            if (Settings.BurstMode)
+                return lines.ToArray();
+            else
+                return new[] { lines[rng.Next(lines.Count)] };
+        }
+        finally { _lock.ExitReadLock(); }
     }
 
     /// <summary>

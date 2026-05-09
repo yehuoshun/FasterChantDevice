@@ -16,13 +16,26 @@ jobs:
     runs-on: windows-latest
     env:
       PROJECT_DIR: src/FasterChantDevice
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Read version from csproj
+        id: version
+        shell: pwsh
+        run: |
+          $xml = [xml](Get-Content "$env:PROJECT_DIR/FasterChantDevice.csproj")
+          $ver = $xml.Project.PropertyGroup.Version
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+          echo "Version: $ver"
 
       - name: Restore
         working-directory: ${{ env.PROJECT_DIR }}
@@ -50,21 +63,24 @@ jobs:
             --self-contained true `
             -o publish/portable
 
-      - name: Zip portable
+      - name: Zip artifacts
         working-directory: ${{ env.PROJECT_DIR }}/publish
-        run: Compress-Archive -Path portable/* -DestinationPath FasterChantDevice-portable-x64.zip
+        run: |
+          $ver = '${{ steps.version.outputs.version }}'
+          Compress-Archive -Path portable/* -DestinationPath "FasterChantDevice-v${ver}-portable-x64.zip"
+          Move-Item -Path single-file/FasterChantDevice.exe -Destination "FasterChantDevice-v${ver}-x64.exe"
 
       - name: Upload Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: nightly
-          name: Nightly Build
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
           draft: false
-          prerelease: true
+          prerelease: false
           files: |
-            src/FasterChantDevice/publish/FasterChantDevice-portable-x64.zip
-            src/FasterChantDevice/publish/single-file/FasterChantDevice.exe
+            src/FasterChantDevice/publish/FasterChantDevice-v${{ steps.version.outputs.version }}-portable-x64.zip
+            src/FasterChantDevice/publish/FasterChantDevice-v${{ steps.version.outputs.version }}-x64.exe
 
   notify:
     needs: build

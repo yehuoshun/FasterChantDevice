@@ -36,6 +36,7 @@ public class GameEventService : IDisposable
 
     // Game start detection: K/D/A all = 0 means new game
     private bool _gameStarted;
+    private int _zeroFrameCount; // debounce counter for all-zero KDA
 
     // Combat timestamps for taunt cooldown
     private DateTime _lastCombatEvent = DateTime.MinValue;
@@ -54,8 +55,8 @@ public class GameEventService : IDisposable
     public async Task StartAsync()
     {
         await _ocr.InitializeAsync();
-        _running = true;
         _cts = new CancellationTokenSource();
+        _running = true;
         _ = Task.Run(MonitorLoop, _cts.Token);
     }
 
@@ -78,6 +79,7 @@ public class GameEventService : IDisposable
                 {
                     // Game not active — reset game state
                     _gameStarted = false;
+                    _zeroFrameCount = 0;
                     _prevKills = _prevDeaths = _prevAssists = -1;
                     await Task.Delay(1000, _cts.Token);
                     continue;
@@ -91,23 +93,22 @@ public class GameEventService : IDisposable
 
                 if (ocrValid)
                 {
-                    // Game start: detect KDA reset from non-zero to all-zero.
-                    // Handles both first game and consecutive matches without tabbing out.
+                    // Game start: require N consecutive all-zero KDA frames
+                    // to avoid false positives from OCR glitches or UI flicker.
                     if (kills == 0 && deaths == 0 && assists == 0 &&
                         _prevKills >= 0 && _prevDeaths >= 0 && _prevAssists >= 0)
                     {
-                        if (_prevKills > 0 || _prevDeaths > 0 || _prevAssists > 0)
-                        {
-                            // Match ended, new one starting
-                            _gameStarted = false;
-                        }
-
-                        if (!_gameStarted)
+                        _zeroFrameCount++;
+                        if (_zeroFrameCount >= 3 && !_gameStarted)
                         {
                             _gameStarted = true;
                             Debug.WriteLine("[GameEvent] New game detected");
                             await TriggerEvent("game_start");
                         }
+                    }
+                    else
+                    {
+                        _zeroFrameCount = 0;
                     }
 
                     // Detect individual KDA changes
@@ -170,7 +171,10 @@ public class GameEventService : IDisposable
     {
         _lastCombatEvent = DateTime.UtcNow;
 
-        var hero = _schemeManager.Heroes.FirstOrDefault();
+        _schemeManager.EnterReadLock();
+        HeroScheme? hero;
+        try { hero = _schemeManager.Heroes.FirstOrDefault(); }
+        finally { _schemeManager.ExitReadLock(); }
         if (hero == null) return;
 
         var phrases = eventType switch
@@ -221,7 +225,10 @@ public class GameEventService : IDisposable
 
         _lastTaunt = DateTime.UtcNow;
 
-        var hero = _schemeManager.Heroes.FirstOrDefault();
+        _schemeManager.EnterReadLock();
+        HeroScheme? hero;
+        try { hero = _schemeManager.Heroes.FirstOrDefault(); }
+        finally { _schemeManager.ExitReadLock(); }
         if (hero == null) return;
 
         var lines = _schemeManager.PickTauntLines(hero);

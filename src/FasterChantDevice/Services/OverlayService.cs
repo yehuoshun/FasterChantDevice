@@ -72,7 +72,10 @@ public class OverlayService : IDisposable
 
     private void OnOverlayKeyPressed(int numberKey)
     {
-        var hero = _schemeManager.Heroes.FirstOrDefault();
+        _schemeManager.EnterReadLock();
+        HeroScheme? hero;
+        try { hero = _schemeManager.Heroes.FirstOrDefault(); }
+        finally { _schemeManager.ExitReadLock(); }
         if (hero == null) return;
 
         if (_currentPanelIndex == -1)
@@ -104,12 +107,12 @@ public class OverlayService : IDisposable
                         _burstCts = new CancellationTokenSource();
                         _ = Task.Run(() => _input.SendLinesSequentially(lines,
                             _schemeManager.Settings.BurstIntervalMs, _burstCts.Token));
+                        Hide();
                     }
                     else
                     {
                         _input.SendText(panel.Lines[numberKey]);
                         Hide();
-                        return;
                     }
                 }
             }
@@ -122,7 +125,10 @@ public class OverlayService : IDisposable
     {
         if (_window == null) return;
 
-        var hero = _schemeManager.Heroes.FirstOrDefault();
+        _schemeManager.EnterReadLock();
+        HeroScheme? hero;
+        try { hero = _schemeManager.Heroes.FirstOrDefault(); }
+        finally { _schemeManager.ExitReadLock(); }
         if (hero == null)
         {
             _window.SetContent(new[] { "无英雄方案" });
@@ -142,28 +148,13 @@ public class OverlayService : IDisposable
 
     private static IntPtr GetGameWindowHandle()
     {
-        // Try exact title match first
         var hwnd = FindWindow(null, "300英雄");
-        if (hwnd != IntPtr.Zero) return hwnd;
-
-        // Fallback: enumerate windows for partial match
-        var found = IntPtr.Zero;
-        EnumWindows((h, _) =>
+        if (hwnd != IntPtr.Zero && IsWindowVisible(hwnd))
         {
-            var buf = new char[256];
-            GetWindowText(h, buf, buf.Length);
-            var t = new string(buf).TrimEnd('\0');
-            if (t.Contains("300英雄") && IsWindowVisible(h))
-            {
-                GetWindowRect(h, out var r);
-                if (r.Width > 800 && r.Height > 600)
-                    found = h;
-            }
-            return found == IntPtr.Zero;
-        }, IntPtr.Zero);
-        if (found != IntPtr.Zero) return found;
-
-        // Last resort: foreground window
+            GetWindowRect(hwnd, out var r);
+            if (r.Width > 800 && r.Height > 600)
+                return hwnd;
+        }
         return GetForegroundWindow();
     }
 

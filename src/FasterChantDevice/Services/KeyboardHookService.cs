@@ -18,7 +18,7 @@ public class KeyboardHookService : IDisposable
     private const int WM_KEYDOWN = 0x0100;
     private const int WM_KEYUP = 0x0101;
 
-    private IntPtr _hookId = IntPtr.Zero;
+    private volatile IntPtr _hookId = IntPtr.Zero;
     private readonly LowLevelKeyboardProc _proc;
     private Thread? _hookThread;
     private volatile bool _running;

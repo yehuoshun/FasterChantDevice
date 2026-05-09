@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
@@ -45,15 +46,17 @@ public partial class App : Application
 
     private void OnGlobalKeyDown(Key key)
     {
-        // F1 → toggle overlay
-        if (key == Key.F1)
+        var triggerKey = ParseKey(_schemeManager!.Settings.TriggerKey);
+        var tauntKey = ParseKey(_schemeManager.Settings.TauntKey);
+
+        // Configured trigger key → toggle overlay
+        if (key == triggerKey)
         {
             Dispatcher.Invoke(() => _overlay?.Toggle());
         }
-        // F2 → manual taunt (cooldown enforced inside GameEventService)
-        else if (key == Key.F2)
+        // Configured taunt key → manual taunt (cooldown enforced inside GameEventService)
+        else if (key == tauntKey)
         {
-            // Marshal to UI thread — GameEventService shares state with WPF
             Dispatcher.Invoke(() => _gameEvent?.ManualTaunt());
         }
         // Escape → close overlay when visible
@@ -71,11 +74,23 @@ public partial class App : Application
         }
     }
 
+    private static Key ParseKey(string keyName)
+    {
+        if (Enum.TryParse<Key>(keyName, ignoreCase: true, out var key))
+            return key;
+        // Fallback: try with "F" prefix removed for bare numbers like "1"
+        if (!keyName.StartsWith('F') && Enum.TryParse<Key>($"D{keyName}", ignoreCase: true, out var dKey))
+            return dKey;
+        Debug.WriteLine($"[App] Unknown key '{keyName}', falling back to F1");
+        return Key.F1;
+    }
+
     private void SetupTray()
     {
         _trayIcon = new System.Windows.Forms.NotifyIcon
         {
             Text = "300高速咏唱装置",
+            Icon = System.Drawing.SystemIcons.Application,
             Visible = true
         };
 

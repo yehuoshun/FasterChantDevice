@@ -294,13 +294,31 @@ public class OcrEngineService : IDisposable
     private static byte[] ToGrayscaleBytes(Bitmap bitmap)
     {
         var bytes = new byte[bitmap.Width * bitmap.Height];
-        for (int y = 0; y < bitmap.Height; y++)
+        var rect = new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
+        var data = bitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        try
         {
-            for (int x = 0; x < bitmap.Width; x++)
+            unsafe
             {
-                var pixel = bitmap.GetPixel(x, y);
-                bytes[y * bitmap.Width + x] = (byte)((pixel.R + pixel.G + pixel.B) / 3);
+                var ptr = (byte*)data.Scan0.ToPointer();
+                for (int y = 0; y < bitmap.Height; y++)
+                {
+                    int rowOffset = y * data.Stride;
+                    int destOffset = y * bitmap.Width;
+                    for (int x = 0; x < bitmap.Width; x++)
+                    {
+                        int pixelOffset = rowOffset + x * 4;
+                        byte b = ptr[pixelOffset];
+                        byte g = ptr[pixelOffset + 1];
+                        byte r = ptr[pixelOffset + 2];
+                        bytes[destOffset + x] = (byte)((r + g + b) / 3);
+                    }
+                }
             }
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
         }
         return bytes;
     }

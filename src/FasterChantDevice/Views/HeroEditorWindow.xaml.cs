@@ -36,15 +36,18 @@ public partial class HeroEditorWindow : Window
 
         // Burst toggle
         BurstToggle.IsChecked = _schemeManager.Settings.BurstMode;
-        BurstToggle.Checked += (_, _) => _schemeManager.Settings.BurstMode = true;
-        BurstToggle.Unchecked += (_, _) => _schemeManager.Settings.BurstMode = false;
+        BurstToggle.Checked += (_, _) => { _schemeManager.Settings.BurstMode = true; _schemeManager.SaveSettings(); };
+        BurstToggle.Unchecked += (_, _) => { _schemeManager.Settings.BurstMode = false; _schemeManager.SaveSettings(); };
 
         // Interval
         IntervalBox.Text = (_schemeManager.Settings.BurstIntervalMs / 1000.0).ToString("0.0");
         IntervalBox.TextChanged += (_, _) =>
         {
             if (double.TryParse(IntervalBox.Text, out var s) && s > 0)
+            {
                 _schemeManager.Settings.BurstIntervalMs = (int)(s * 1000);
+                _schemeManager.SaveSettings();
+            }
         };
 
         // Select triggers tab by default
