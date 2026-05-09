@@ -22,7 +22,9 @@ public class OcrEngineService : IDisposable
 {
     private readonly Models.AppSettings _settings;
     private OcrEngine? _engine;
-    private RECT _lastWindowRect;
+    private IntPtr _cachedGameHwnd;
+    private DateTime _lastHwndCheck = DateTime.MinValue;
+    private static readonly TimeSpan HwndCacheTtl = TimeSpan.FromSeconds(2);
 
     public OcrEngineService(Models.AppSettings settings)
     {
@@ -56,13 +58,24 @@ public class OcrEngineService : IDisposable
     }
 
     /// <summary>
-    /// Get the game window handle and its rect.
+    /// Get the game window handle. Cached for 2s to avoid repeated enumeration.
     /// </summary>
     public IntPtr FindGameWindow()
     {
+        // Return cached handle if still valid
+        if (_cachedGameHwnd != IntPtr.Zero && IsWindow(_cachedGameHwnd) &&
+            DateTime.UtcNow - _lastHwndCheck < HwndCacheTtl)
+            return _cachedGameHwnd;
+
+        _lastHwndCheck = DateTime.UtcNow;
+
         // Try exact title match
         var hwnd = FindWindow(null, "300英雄");
-        if (hwnd != IntPtr.Zero) return hwnd;
+        if (hwnd != IntPtr.Zero)
+        {
+            _cachedGameHwnd = hwnd;
+            return hwnd;
+        }
 
         // Try partial match by enumerating windows
         EnumWindows((h, _) =>
@@ -72,13 +85,14 @@ public class OcrEngineService : IDisposable
             var t = new string(title).TrimEnd('\0');
             if (t.Contains("300") && !t.Contains("FasterChant") && IsWindowVisible(h))
             {
-                GetWindowRect(h, out _lastWindowRect);
-                if (_lastWindowRect.Width > 800 && _lastWindowRect.Height > 600)
+                GetWindowRect(h, out var rect);
+                if (rect.Width > 800 && rect.Height > 600)
                     hwnd = h;
             }
             return hwnd == IntPtr.Zero;
         }, IntPtr.Zero);
 
+        _cachedGameHwnd = hwnd;
         return hwnd;
     }
 
@@ -101,7 +115,6 @@ public class OcrEngineService : IDisposable
             if (hwnd == IntPtr.Zero) return (-1, -1, -1);
 
             GetWindowRect(hwnd, out var windowRect);
-            _lastWindowRect = windowRect;
 
             // Calculate KDA region based on configured ratios
             var region = _settings.KdaRegion;
@@ -350,6 +363,9 @@ public class OcrEngineService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern bool IsWindowVisible(IntPtr hWnd);

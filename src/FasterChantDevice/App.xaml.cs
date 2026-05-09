@@ -56,6 +56,11 @@ public partial class App : Application
             // Marshal to UI thread — GameEventService shares state with WPF
             Dispatcher.Invoke(() => _gameEvent?.ManualTaunt());
         }
+        // Escape → close overlay when visible
+        else if (key == Key.Escape && _overlay?.IsVisible == true)
+        {
+            Dispatcher.Invoke(() => _overlay?.Hide());
+        }
         // Number keys 0-9 → route to overlay when visible
         else if (_overlay?.IsVisible == true)
         {

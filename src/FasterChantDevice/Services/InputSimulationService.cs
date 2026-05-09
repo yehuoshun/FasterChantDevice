@@ -42,7 +42,10 @@ public class InputSimulationService
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             SendText(line);
-            Thread.Sleep(intervalMs);
+
+            // Cancellable wait (Thread.Sleep blocks cancellation)
+            if (intervalMs > 0)
+                ct.WaitHandle.WaitOne(intervalMs);
         }
     }
 

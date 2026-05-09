@@ -138,6 +138,11 @@ public class HeroEditorViewModel : INotifyPropertyChanged
             .Where(l => l.Count > 0)
             .ToList();
 
+        // Sync panels back to hero (include only non-empty panels)
+        _hero.Panels = Panels
+            .Where(p => !string.IsNullOrEmpty(p.Name) || p.Lines.Count > 0)
+            .ToList();
+
         _schemeManager.SaveHero(_hero);
     }
 
