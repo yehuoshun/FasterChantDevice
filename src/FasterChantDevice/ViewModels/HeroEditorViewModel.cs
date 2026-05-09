@@ -35,7 +35,7 @@ public class HeroEditorViewModel : INotifyPropertyChanged
     }
 
     // --- Trigger phrases (single textblock, line-based) ---
-    private string _gameStartText = string.Join("\n", _hero.Triggers.GameStart);
+    private string _gameStartText = "";
     public string GameStartText
     {
         get => _gameStartText;
@@ -47,7 +47,7 @@ public class HeroEditorViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _killText = string.Join("\n", _hero.Triggers.Kill);
+    private string _killText = "";
     public string KillText
     {
         get => _killText;
@@ -59,7 +59,7 @@ public class HeroEditorViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _deathText = string.Join("\n", _hero.Triggers.Death);
+    private string _deathText = "";
     public string DeathText
     {
         get => _deathText;
@@ -71,7 +71,7 @@ public class HeroEditorViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _assistText = string.Join("\n", _hero.Triggers.Assist);
+    private string _assistText = "";
     public string AssistText
     {
         get => _assistText;

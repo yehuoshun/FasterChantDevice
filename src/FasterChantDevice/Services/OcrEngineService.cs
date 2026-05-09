@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
@@ -211,11 +213,12 @@ public class OcrEngineService : IDisposable
     {
         if (_engine == null) return "";
 
-        using var stream = new InMemoryRandomAccessStream();
-        bitmap.Save(stream.AsStream(), ImageFormat.Png);
-        stream.Seek(0);
+        using var stream = new MemoryStream();
+        bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+        stream.Position = 0;
 
-        var decoder = await BitmapDecoder.CreateAsync(stream);
+        var randomAccessStream = stream.AsRandomAccessStream();
+        var decoder = await BitmapDecoder.CreateAsync(randomAccessStream);
         var softwareBitmap = await decoder.GetSoftwareBitmapAsync();
         // Convert to BGRA8 if needed
         if (softwareBitmap.BitmapPixelFormat != BitmapPixelFormat.Bgra8 ||
@@ -250,11 +253,11 @@ public class OcrEngineService : IDisposable
         using var attr = new ImageAttributes();
         var matrix = new ColorMatrix(new float[][]
         {
-            new[] { 1.5f, 0, 0, 0, 0 },
-            new[] { 0, 1.5f, 0, 0, 0 },
-            new[] { 0, 0, 1.5f, 0, 0 },
-            new[] { 0, 0, 0, 1, 0 },
-            new[] { -0.1f, -0.1f, -0.1f, 0, 1 }
+            new float[] { 1.5f, 0f, 0f, 0f, 0f },
+            new float[] { 0f, 1.5f, 0f, 0f, 0f },
+            new float[] { 0f, 0f, 1.5f, 0f, 0f },
+            new float[] { 0f, 0f, 0f, 1f, 0f },
+            new float[] { -0.1f, -0.1f, -0.1f, 0f, 1f }
         });
         attr.SetColorMatrix(matrix);
         g.DrawImage(source,
