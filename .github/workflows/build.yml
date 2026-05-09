@@ -8,9 +8,14 @@ on:
   issues:
     types: [opened, closed, reopened]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      PROJECT_DIR: src/FasterChantDevice
     steps:
       - uses: actions/checkout@v4
 
@@ -20,29 +25,34 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore
+        working-directory: ${{ env.PROJECT_DIR }}
         run: dotnet restore
 
       - name: Build
+        working-directory: ${{ env.PROJECT_DIR }}
         run: dotnet build --configuration Release --no-restore
 
-      - name: Publish (self-contained)
+      - name: Publish (single file)
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          dotnet publish src/FasterChantDevice/FasterChantDevice.csproj `
-            --configuration Release `
+          dotnet publish --configuration Release `
             --runtime win-x64 `
             --self-contained true `
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -o publish/single-file
 
-          dotnet publish src/FasterChantDevice/FasterChantDevice.csproj `
-            --configuration Release `
+      - name: Publish (portable)
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          dotnet publish --configuration Release `
             --runtime win-x64 `
             --self-contained true `
             -o publish/portable
 
       - name: Zip portable
-        run: Compress-Archive -Path publish/portable/* -DestinationPath FasterChantDevice-portable-x64.zip
+        working-directory: ${{ env.PROJECT_DIR }}/publish
+        run: Compress-Archive -Path portable/* -DestinationPath FasterChantDevice-portable-x64.zip
 
       - name: Upload Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -53,8 +63,8 @@ jobs:
           draft: false
           prerelease: true
           files: |
-            FasterChantDevice-portable-x64.zip
-            publish/single-file/FasterChantDevice.exe
+            src/FasterChantDevice/publish/FasterChantDevice-portable-x64.zip
+            src/FasterChantDevice/publish/single-file/FasterChantDevice.exe
 
   notify:
     needs: build
