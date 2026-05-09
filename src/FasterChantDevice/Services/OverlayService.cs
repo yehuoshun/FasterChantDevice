@@ -209,6 +209,8 @@ public class OverlayService : IDisposable
     private struct RECT
     {
         public int Left, Top, Right, Bottom;
+        public int Width => Right - Left;
+        public int Height => Bottom - Top;
     }
     #endregion
 }
