@@ -1,0 +1,11 @@
+<Application x:Class="FasterChantDevice.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <!-- Dark theme baseline -->
+        <Style TargetType="Window">
+            <Setter Property="Background" Value="#FF1a1a2e"/>
+        </Style>
+    </Application.Resources>
+</Application>

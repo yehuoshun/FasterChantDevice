@@ -1,0 +1,10 @@
+[Content_Types].xml
+bin/
+obj/
+*.user
+*.suo
+.vs/
+publish/
+*.zip
+*.exe
+data/

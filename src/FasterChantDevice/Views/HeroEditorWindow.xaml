@@ -1,0 +1,76 @@
+<Window x:Class="FasterChantDevice.Views.HeroEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="英雄方案编辑" Width="700" Height="550"
+        WindowStartupLocation="CenterScreen"
+        Background="#FF1a1a2e">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top bar: hero selector + burst status -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="英雄：" Foreground="White" VerticalAlignment="Center" FontSize="14"/>
+            <ComboBox x:Name="HeroCombo" Width="160" Margin="8,0"
+                      SelectionChanged="HeroCombo_SelectionChanged"/>
+            <Button Content="+新建" Width="60" Margin="4,0" Click="NewHero_Click"/>
+            <Button Content="×删除" Width="60" Click="DeleteHero_Click"/>
+
+            <Rectangle Width="20"/>
+            <CheckBox x:Name="BurstToggle" Content="连发" Foreground="White"
+                      IsChecked="True" VerticalAlignment="Center"/>
+            <TextBlock Text="间隔" Foreground="White" VerticalAlignment="Center" Margin="8,0,4,0"/>
+            <TextBox x:Name="IntervalBox" Width="50" Text="1.0"/>
+            <TextBlock Text="秒" Foreground="White" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Tab bar -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button x:Name="TriggersTabBtn" Content="条件触发" Width="100"
+                    Click="TriggersTab_Click" Background="#FFe94560" Foreground="White"/>
+            <Button x:Name="PanelsTabBtn" Content="快捷发言" Width="100"
+                    Click="PanelsTab_Click" Background="#FF2a2a4a" Foreground="White"/>
+        </StackPanel>
+
+        <!-- Tab content -->
+        <Grid Grid.Row="2">
+            <ScrollViewer x:Name="TriggersPanel" Visibility="Visible"
+                          VerticalScrollBarVisibility="Auto">
+                <!-- Triggers content built in code-behind -->
+                <StackPanel x:Name="TriggersContent" Margin="0"/>
+            </ScrollViewer>
+
+            <Grid x:Name="PanelsPanel" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: group list -->
+                <ListBox x:Name="PanelList" Grid.Column="0"
+                         SelectionChanged="PanelList_SelectionChanged"
+                         Background="#FF2a2a4a" Foreground="White"
+                         BorderThickness="0"/>
+
+                <!-- Right: group editor -->
+                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                    <TextBlock Text="分组名称：" Foreground="White" Margin="0,0,0,4"/>
+                    <TextBox x:Name="PanelNameBox" TextChanged="PanelName_TextChanged"
+                             Background="#FF2a2a4a" Foreground="White" Height="28"/>
+
+                    <TextBlock Text="发言内容（一行 = 一条）：" Foreground="White"
+                               Margin="0,12,0,4"/>
+                    <TextBox x:Name="PanelContentBox" AcceptsReturn="True"
+                             TextChanged="PanelContent_TextChanged"
+                             Background="#FF2a2a4a" Foreground="White"
+                             Height="250" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

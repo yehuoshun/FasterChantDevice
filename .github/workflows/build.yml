@@ -1,0 +1,66 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, closed, reopened]
+  issues:
+    types: [opened, closed, reopened]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish (self-contained)
+        run: |
+          dotnet publish src/FasterChantDevice/FasterChantDevice.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o publish/single-file
+
+          dotnet publish src/FasterChantDevice/FasterChantDevice.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -o publish/portable
+
+      - name: Zip portable
+        run: Compress-Archive -Path publish/portable/* -DestinationPath FasterChantDevice-portable-x64.zip
+
+      - name: Upload Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          draft: false
+          prerelease: true
+          files: |
+            FasterChantDevice-portable-x64.zip
+            publish/single-file/FasterChantDevice.exe
+
+  notify:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: yehuoshun/yehuoshun-notify@main
+        with:
+          webhook: ${{ secrets.DINGTALK_WEBHOOK }}
