@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace _300FasterChantDevice.Services;
+namespace FasterChantDevice.Services;
 
 /// <summary>
 /// Low-level keyboard hook (WH_KEYBOARD_LL) for global key monitoring.

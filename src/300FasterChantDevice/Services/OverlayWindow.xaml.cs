@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Input;
 
-namespace _300FasterChantDevice.Services;
+namespace FasterChantDevice.Services;
 
 public partial class OverlayWindow : Window
 {

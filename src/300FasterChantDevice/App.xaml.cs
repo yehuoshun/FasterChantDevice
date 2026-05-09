@@ -3,9 +3,9 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using _300FasterChantDevice.Services;
+using FasterChantDevice.Services;
 
-namespace _300FasterChantDevice;
+namespace FasterChantDevice;
 
 public partial class App : Application
 {

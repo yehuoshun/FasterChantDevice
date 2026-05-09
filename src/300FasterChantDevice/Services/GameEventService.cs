@@ -4,8 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FasterChantDevice.Models;
 
-namespace _300FasterChantDevice.Services;
+namespace FasterChantDevice.Services;
 
 /// <summary>
 /// Monitors 300 Heroes game events via OCR and triggers auto-send.

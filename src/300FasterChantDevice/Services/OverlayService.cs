@@ -4,8 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
+using FasterChantDevice.Models;
 
-namespace _300FasterChantDevice.Services;
+namespace FasterChantDevice.Services;
 
 /// <summary>
 /// Manages the semi-transparent overlay window that appears on top of the game.

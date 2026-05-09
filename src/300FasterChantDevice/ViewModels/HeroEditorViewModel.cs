@@ -4,9 +4,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using _300FasterChantDevice.Models;
+using FasterChantDevice.Models;
+using FasterChantDevice.Services;
 
-namespace _300FasterChantDevice.ViewModels;
+namespace FasterChantDevice.ViewModels;
 
 public class HeroEditorViewModel : INotifyPropertyChanged
 {

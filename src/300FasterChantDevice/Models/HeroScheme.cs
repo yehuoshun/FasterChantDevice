@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace _300FasterChantDevice.Models;
+namespace FasterChantDevice.Models;
 
 public class HeroScheme
 {
