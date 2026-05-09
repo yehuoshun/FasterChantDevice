@@ -11,7 +11,7 @@ using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Storage.Streams;
 
-namespace FasterChantDevice.Services;
+namespace _300FasterChantDevice.Services;
 
 /// <summary>
 /// OCR engine for reading 300 Heroes in-game HUD elements.

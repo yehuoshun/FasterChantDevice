@@ -2,10 +2,10 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using FasterChantDevice.Services;
-using FasterChantDevice.ViewModels;
+using _300FasterChantDevice.Services;
+using _300FasterChantDevice.ViewModels;
 
-namespace FasterChantDevice.Views;
+namespace _300FasterChantDevice.Views;
 
 public partial class HeroEditorWindow : Window
 {

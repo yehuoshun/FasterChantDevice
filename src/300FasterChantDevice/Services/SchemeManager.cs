@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using FasterChantDevice.Models;
+using _300FasterChantDevice.Models;
 
-namespace FasterChantDevice.Services;
+namespace _300FasterChantDevice.Services;
 
 /// <summary>
 /// Manages loading/saving hero schemes and global settings as JSON files.

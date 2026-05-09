@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace FasterChantDevice.Services;
+namespace _300FasterChantDevice.Services;
 
 /// <summary>
 /// Simulates keyboard input via SendInput.

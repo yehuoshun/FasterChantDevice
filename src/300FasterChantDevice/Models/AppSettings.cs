@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace FasterChantDevice.Models;
+namespace _300FasterChantDevice.Models;
 
 public class AppSettings
 {

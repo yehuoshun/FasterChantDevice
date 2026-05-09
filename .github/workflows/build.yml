@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: windows-latest
     env:
-      PROJECT_DIR: src/FasterChantDevice
+      PROJECT_DIR: src/300FasterChantDevice
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +52,7 @@ jobs:
 
       - name: Zip portable
         working-directory: ${{ env.PROJECT_DIR }}/publish
-        run: Compress-Archive -Path portable/* -DestinationPath FasterChantDevice-portable-x64.zip
+        run: Compress-Archive -Path portable/* -DestinationPath 300FasterChantDevice-portable-x64.zip
 
       - name: Upload Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -63,8 +63,8 @@ jobs:
           draft: false
           prerelease: true
           files: |
-            src/FasterChantDevice/publish/FasterChantDevice-portable-x64.zip
-            src/FasterChantDevice/publish/single-file/FasterChantDevice.exe
+            src/300FasterChantDevice/publish/300FasterChantDevice-portable-x64.zip
+            src/300FasterChantDevice/publish/single-file/300FasterChantDevice.exe
 
   notify:
     needs: build
