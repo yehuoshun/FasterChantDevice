@@ -1,4 +1,4 @@
-# 300FasterChantDevice — 设计文档
+# FasterChantDevice — 设计文档
 
 > 300 高速咏唱装置 2.0  
 > 基于 FasterChantDevice (Anran-233) 理念重写  
