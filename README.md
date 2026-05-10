@@ -162,6 +162,25 @@ dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 | `taunt_interval_s` | 定时骚话间隔（秒） |
 | `taunt_cooldown_s` | 战斗后骚话冷却（秒） |
 | `ocr_*_region` | OCR 检测区域（窗口比例，0~1） |
+| `debug_mode` | 调试模式开关（`true`/`false`） |
+| `debug_log_level` | 日志级别：`Trace` / `Debug` / `Info` / `Warning` / `Error` |
+
+## 🔧 调试模式
+
+## 🔧 调试模式
+
+启用 `debug_mode: true` 后：
+
+- 所有运行事件写入 `%LocalAppData%\FasterChantDevice\debug.log`
+- 托盘图标显示 `[DEBUG]` 标识
+- `Ctrl+Shift+D` 打开诊断窗口，实时查看：
+  - 游戏窗口检测状态（HWND、位置、前台）
+  - KDA OCR 原始/解析值
+  - 击杀播报文字
+  - 事件触发记录
+  - 像素变化检测
+  - 滚动日志（按级别着色）
+- 诊断窗口可一键截图 OCR 区域保存到 `screenshots/` 目录
 
 ## 🏗️ 架构
 
@@ -186,11 +205,14 @@ src/FasterChantDevice/
 │   ├── InputSimulationService.cs # SendInput 模拟按键
 │   ├── OverlayService.cs       # 悬浮穿透面板管理
 │   ├── OverlayWindow.*         # 悬浮面板 WPF 窗口
-│   └── SchemeManager.cs        # JSON 方案读写
+│   ├── SchemeManager.cs        # JSON 方案读写
+│   ├── DebugLogger.cs          # 调试日志（文件 + 事件）
+│   └── DebugService.cs         # 运行时诊断状态
 ├── ViewModels/          # MVVM
 │   └── HeroEditorViewModel.cs
 ├── Views/               # WPF 窗口
-│   └── HeroEditorWindow.*
+│   ├── HeroEditorWindow.*
+│   └── DebugWindow.*           # 调试诊断窗口
 └── App.xaml             # 应用入口
 ```
 
@@ -205,6 +227,14 @@ src/FasterChantDevice/
 **Q: 悬浮面板位置不对？**
 
 高 DPI 显示器已适配，如仍有偏差可调整 `settings.json` 中的窗口定位。
+
+**Q: 如何排查 OCR 不触发的问题？**
+
+1. 设置 `debug_mode: true`
+2. 重启程序 → `Ctrl+Shift+D` 打开诊断窗口
+3. 进入游戏 → 观察 KDA OCR 读数是否正确
+4. 点击 📸 截图按钮，检查截图区域是否覆盖到 KDA 数字
+5. 查看 `debug.log` 中的 `[OCR]` 和 `[GameEvent]` 日志
 
 **Q: 会被封号吗？**
 

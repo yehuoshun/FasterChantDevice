@@ -27,6 +27,7 @@ public class GameEventService : IDisposable
     private readonly Models.AppSettings _settings;
     private CancellationTokenSource? _cts;
     private volatile bool _running;
+    private DebugService? _debug;
 
     // K/D/A tracking for change detection
     private int _prevKills = -1, _prevDeaths = -1, _prevAssists = -1;
@@ -44,12 +45,13 @@ public class GameEventService : IDisposable
     private DateTime _lastManualTaunt = DateTime.MinValue;
     private const int ManualTauntCooldownS = 10;
 
-    public GameEventService(SchemeManager schemeManager, InputSimulationService input)
+    public GameEventService(SchemeManager schemeManager, InputSimulationService input, DebugService? debug = null)
     {
         _schemeManager = schemeManager;
         _input = input;
         _settings = schemeManager.Settings;
         _ocr = new OcrEngineService(_settings);
+        _debug = debug;
     }
 
     public async Task StartAsync()
@@ -93,6 +95,11 @@ public class GameEventService : IDisposable
 
                 if (ocrValid)
                 {
+                    // Debug: update KDA display
+                    _debug?.UpdateKda(
+                        System.Diagnostics.Debugger.IsAttached ? $"K={kills} D={deaths} A={assists}" : "",
+                        kills, deaths, assists);
+                    DebugLogger.Debug($"KDA={kills}/{deaths}/{assists}", "OCR");
                     // Game start: require N consecutive all-zero KDA frames
                     // to avoid false positives from OCR glitches or UI flicker.
                     if (kills == 0 && deaths == 0 && assists == 0 &&
@@ -102,6 +109,8 @@ public class GameEventService : IDisposable
                         if (_zeroFrameCount >= 3 && !_gameStarted)
                         {
                             _gameStarted = true;
+                            DebugLogger.Info("New game detected (KDA all zero)", "GameEvent");
+                            _debug?.UpdateLastEvent("开局", "KDA归零");
                             Debug.WriteLine("[GameEvent] New game detected");
                             await TriggerEvent("game_start");
                         }
@@ -116,19 +125,26 @@ public class GameEventService : IDisposable
                     {
                         if (kills > _prevKills)
                         {
+                            DebugLogger.Info($"Kill detected ({_prevKills} -> {kills})", "GameEvent");
+                            _debug?.UpdateLastEvent("击杀", $"{_prevKills}→{kills}");
                             Debug.WriteLine($"[GameEvent] Kill detected ({_prevKills} → {kills})");
                             // Broadcast OCR for debug confirmation (KDA counter is authoritative)
                             var broadcast = await _ocr.ReadBroadcastText();
                             Debug.WriteLine($"[GameEvent] Kill broadcast: '{broadcast}'");
+                            _debug?.UpdateBroadcast(broadcast);
                             await TriggerEvent("kill");
                         }
                         if (deaths > _prevDeaths)
                         {
+                            DebugLogger.Info($"Death detected ({_prevDeaths} -> {deaths})", "GameEvent");
+                            _debug?.UpdateLastEvent("死亡", $"{_prevDeaths}→{deaths}");
                             Debug.WriteLine($"[GameEvent] Death detected ({_prevDeaths} → {deaths})");
                             await TriggerEvent("death");
                         }
                         if (assists > _prevAssists)
                         {
+                            DebugLogger.Info($"Assist detected ({_prevAssists} -> {assists})", "GameEvent");
+                            _debug?.UpdateLastEvent("助攻", $"{_prevAssists}→{assists}");
                             Debug.WriteLine($"[GameEvent] Assist detected ({_prevAssists} → {assists})");
                             await TriggerEvent("assist");
                         }

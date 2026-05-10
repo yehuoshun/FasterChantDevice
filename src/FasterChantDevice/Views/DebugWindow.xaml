@@ -1,0 +1,113 @@
+<Window x:Class="FasterChantDevice.Views.DebugWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="🔧 调试诊断 — 300高速咏唱装置" Height="600" Width="800"
+        WindowStyle="ToolWindow" ResizeMode="CanResize" Topmost="True"
+        Background="#1E1E1E" Foreground="#DCDCDC">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Status Header -->
+        <Border Grid.Row="0" Background="#2D2D30" Padding="10" CornerRadius="4" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+
+                <!-- Row 0 -->
+                <TextBlock Grid.Row="0" Grid.Column="0" Foreground="#888" Text="游戏窗口:" Margin="0,0,3,0"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
+                           Text="{Binding GameWindowStatus}" Foreground="#4EC9B0" TextTrimming="CharacterEllipsis"/>
+
+                <TextBlock Grid.Row="0" Grid.Column="1" Foreground="#888" Text="" Visibility="Collapsed"/>
+
+                <!-- Row 1 -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Foreground="#888" Text="键盘钩子:"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding HookStatus}" Foreground="#DCDCAA"/>
+                <TextBlock Grid.Row="1" Grid.Column="2" Foreground="#888" Text="{Binding OverlayStatus, StringFormat='面板: {0}'}"/>
+
+                <!-- Row 2: KDA -->
+                <TextBlock Grid.Row="2" Grid.Column="0" Foreground="#888" Text="KDA OCR:"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding KdaParsed}" Foreground="#569CD6"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Foreground="#888"
+                           Text="{Binding KdaRaw, StringFormat='原始: {0}'}" TextTrimming="CharacterEllipsis"/>
+
+                <!-- Row 3 -->
+                <TextBlock Grid.Row="3" Grid.Column="0" Foreground="#888" Text="播报文字:"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
+                           Text="{Binding BroadcastText}" Foreground="#CE9178" TextTrimming="CharacterEllipsis"/>
+
+                <!-- Row 4 -->
+                <TextBlock Grid.Row="4" Grid.Column="0" Foreground="#888" Text="最近事件:"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding LastEvent}" Foreground="#D7BA7D"/>
+                <TextBlock Grid.Row="4" Grid.Column="2" Foreground="#888"
+                           Text="{Binding PixelChange, StringFormat='像素变化: {0}'}"/>
+            </Grid>
+        </Border>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="📸 截图 KDA 区域" Click="ScreenshotKda_Click"
+                    Background="#3C3C3C" Foreground="#DCDCDC" Margin="0,0,6,0"
+                    Padding="8,4" BorderThickness="1" BorderBrush="#555"/>
+            <Button Content="📸 截图播报区域" Click="ScreenshotBroadcast_Click"
+                    Background="#3C3C3C" Foreground="#DCDCDC" Margin="0,0,6,0"
+                    Padding="8,4" BorderThickness="1" BorderBrush="#555"/>
+            <Button Content="🗑 清空日志" Click="ClearLog_Click"
+                    Background="#3C3C3C" Foreground="#DCDCDC" Margin="0,0,6,0"
+                    Padding="8,4" BorderThickness="1" BorderBrush="#555"/>
+            <Button Content="📋 打开日志目录" Click="OpenLogDir_Click"
+                    Background="#3C3C3C" Foreground="#DCDCDC" Padding="8,4"
+                    BorderThickness="1" BorderBrush="#555"/>
+        </StackPanel>
+
+        <!-- Log List -->
+        <Border Grid.Row="2" Background="#252526" CornerRadius="4" Padding="4">
+            <ListBox x:Name="LogList" ItemsSource="{Binding LogEntries}"
+                     Background="Transparent" BorderThickness="0"
+                     Foreground="#DCDCDC" FontFamily="Consolas" FontSize="12"
+                     VirtualizingStackPanel.IsVirtualizing="True"
+                     VirtualizingStackPanel.ScrollUnit="Pixel">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding ToLine}" TextTrimming="CharacterEllipsis">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Level}" Value="Error">
+                                            <Setter Property="Foreground" Value="#F44747"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Level}" Value="Warning">
+                                            <Setter Property="Foreground" Value="#CCA700"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Level}" Value="Info">
+                                            <Setter Property="Foreground" Value="#6A9955"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Level}" Value="Debug">
+                                            <Setter Property="Foreground" Value="#569CD6"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Level}" Value="Trace">
+                                            <Setter Property="Foreground" Value="#808080"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </Grid>
+</Window>

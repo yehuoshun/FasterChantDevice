@@ -108,8 +108,19 @@ K/D/A 变化 →
 ├── 键盘钩子线程（WH_KEYBOARD_LL，回调 <1ms）
 ├── OCR 检测线程（游戏中激活，3fps）
 ├── 看门狗线程（500ms 检查钩子存活）
-└── 热键备胎（RegisterHotKey 兜底）
+├── 热键备胎（RegisterHotKey 兜底）
+└── 调试线程（DebugLogger 文件写入，DebugWindow 1s 刷新）
 ```
+
+## 四-B、调试模式
+
+`settings.json` 中设置 `debug_mode: true` 启用：
+
+- **DebugLogger**：结构化文件日志 → `debug.log`，自动轮转（>10MB）
+- **DebugService**：运行时状态采集，INotifyPropertyChanged 驱动 UI
+- **DebugWindow**：`Ctrl+Shift+D` 打开/关闭，实时显示 OCR 读数、事件日志、游戏窗口状态
+- **截图功能**：一键保存 KDA/播报区域截图到 `screenshots/`
+- **日志级别**：`debug_log_level` 控制（Trace/Debug/Info/Warning/Error）
 
 ---
 

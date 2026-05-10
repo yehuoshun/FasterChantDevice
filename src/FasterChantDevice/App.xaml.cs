@@ -16,6 +16,9 @@ public partial class App : Application
     private OverlayService? _overlay;
     private GameEventService? _gameEvent;
     private System.Windows.Forms.NotifyIcon? _trayIcon;
+    private DebugService? _debug;
+    private Views.DebugWindow? _debugWindow;
+    private bool _ctrlPressed;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -28,17 +31,46 @@ public partial class App : Application
         _schemeManager = new SchemeManager(dataDir);
         _schemeManager.LoadAll();
 
+        // Debug mode: enable file logging
+        if (_schemeManager.Settings.DebugMode)
+        {
+            DebugLogger.Enable(dataDir, _schemeManager.Settings.DebugLogLevel);
+            DebugLogger.Info($"Debug mode enabled (level={_schemeManager.Settings.DebugLogLevel})");
+            DebugLogger.Info($"Data dir: {dataDir}");
+            DebugLogger.Info($"GameWindowClass: {_schemeManager.Settings.GameWindowClass}");
+            DebugLogger.Info($"KDA region: x={_schemeManager.Settings.KdaRegion.XRatio:F2} " +
+                $"y={_schemeManager.Settings.KdaRegion.YRatio:F2} " +
+                $"w={_schemeManager.Settings.KdaRegion.WRatio:F2} " +
+                $"h={_schemeManager.Settings.KdaRegion.HRatio:F2}");
+        }
+
+        var ocr = new OcrEngineService(_schemeManager.Settings);
+
         _inputSim = new InputSimulationService();
         _overlay = new OverlayService(_schemeManager, _inputSim);
-        _gameEvent = new GameEventService(_schemeManager, _inputSim);
+
+        _debug = new DebugService(ocr, _schemeManager, null, null, _overlay);
+        _gameEvent = new GameEventService(_schemeManager, _inputSim, _debug);
 
         // Start keyboard hook
         _keyboardHook = new KeyboardHookService();
         _keyboardHook.KeyDown += OnGlobalKeyDown;
+        _keyboardHook.KeyUp += OnGlobalKeyUp;
         _keyboardHook.Start();
+
+        // Update debug service refs after hook is started
+        var debugField = typeof(DebugService).GetField("_hook",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        debugField?.SetValue(_debug, _keyboardHook);
+        var gameEventField = typeof(DebugService).GetField("_gameEvent",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        gameEventField?.SetValue(_debug, _gameEvent);
 
         // Start game event monitoring
         _gameEvent.Start();
+
+        if (_schemeManager.Settings.DebugMode)
+            DebugLogger.Info("Application startup complete, game event monitor started");
 
         // Setup tray icon
         SetupTray();
@@ -46,6 +78,17 @@ public partial class App : Application
 
     private void OnGlobalKeyDown(Key key)
     {
+        // Debug hotkey: Ctrl+Shift+D
+        if (key == Key.LeftCtrl || key == Key.RightCtrl)
+        {
+            _ctrlPressed = true;
+        }
+        if (key == Key.D && _ctrlPressed && (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)))
+        {
+            Dispatcher.Invoke(ToggleDebugWindow);
+            return;
+        }
+
         var triggerKey = ParseKey(_schemeManager!.Settings.TriggerKey);
         var tauntKey = ParseKey(_schemeManager.Settings.TauntKey);
 
@@ -74,6 +117,28 @@ public partial class App : Application
         }
     }
 
+    private void OnGlobalKeyUp(Key key)
+    {
+        if (key == Key.LeftCtrl || key == Key.RightCtrl)
+            _ctrlPressed = false;
+    }
+
+    private void ToggleDebugWindow()
+    {
+        if (_debugWindow == null || !_debugWindow.IsVisible)
+        {
+            if (_debug == null) return;
+            _debugWindow = new Views.DebugWindow(_debug);
+            _debugWindow.Show();
+            DebugLogger.Info("Debug window opened");
+        }
+        else
+        {
+            _debugWindow.Hide();
+            DebugLogger.Info("Debug window closed");
+        }
+    }
+
     private static Key ParseKey(string keyName)
     {
         if (Enum.TryParse<Key>(keyName, ignoreCase: true, out var key))
@@ -89,7 +154,9 @@ public partial class App : Application
     {
         _trayIcon = new System.Windows.Forms.NotifyIcon
         {
-            Text = "300高速咏唱装置",
+            Text = _schemeManager!.Settings.DebugMode
+                ? "300高速咏唱装置 [DEBUG]"
+                : "300高速咏唱装置",
             Icon = System.Drawing.SystemIcons.Application,
             Visible = true
         };
@@ -103,6 +170,13 @@ public partial class App : Application
                 editor.Show();
             });
         });
+
+        if (_schemeManager.Settings.DebugMode)
+        {
+            contextMenu.Items.Add("🔧 调试窗口", null, (_, _) =>
+                Dispatcher.Invoke(ToggleDebugWindow));
+        }
+
         contextMenu.Items.Add("设置", null, (_, _) => { /* TODO: settings window */ });
         contextMenu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         contextMenu.Items.Add("退出", null, (_, _) => Shutdown());
@@ -112,9 +186,11 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        DebugLogger.Info("Application shutting down");
         _keyboardHook?.Dispose();
         _overlay?.Dispose();
         _gameEvent?.Dispose();
+        _debugWindow?.Close();
         _trayIcon?.Dispose();
         base.OnExit(e);
     }

@@ -397,5 +397,14 @@ public class OcrEngineService : IDisposable
         public int Height => Bottom - Top;
     }
 
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRectStaticInternal(IntPtr hWnd, out RECT lpRect);
+
+    /// <summary>
+    /// Public static wrapper for GetWindowRect, usable by DebugService.
+    /// </summary>
+    public static bool GetWindowRectStatic(IntPtr hWnd, out RECT rect) =>
+        GetWindowRectStaticInternal(hWnd, out rect);
+
     #endregion
 }

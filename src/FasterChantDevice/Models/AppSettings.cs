@@ -28,6 +28,13 @@ public class AppSettings
     [JsonPropertyName("taunt_cooldown_s")]
     public int TauntCooldownS { get; set; } = 5;
 
+    // Debug
+    [JsonPropertyName("debug_mode")]
+    public bool DebugMode { get; set; } = false;
+
+    [JsonPropertyName("debug_log_level")]
+    public string DebugLogLevel { get; set; } = "Info"; // Trace | Debug | Info | Warning | Error
+
     // Game window
     [JsonPropertyName("game_window_class")]
     public string GameWindowClass { get; set; } = "300Heroes";
