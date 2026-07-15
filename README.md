@@ -1,8 +1,13 @@
 # 300高速咏唱装置 2.0
 
+> ⚠️ **本项目已停止维护** — 不再接受新功能请求和 Bug 修复，仅保留存档供参考。
+> 新版本计划用 Rust 重写，敬请期待。
+
 > 300 英雄快捷喊话 & 自动嘲讽工具 — 手残党的终极解决方案  
+
 > 技术栈：C# / .NET 8 / WPF / Windows 10+
 
+[![Archived](https://img.shields.io/badge/status-archived-lightgrey.svg)]()
 [![Build](https://github.com/yehuoshun/FasterChantDevice/actions/workflows/build.yml/badge.svg)](https://github.com/yehuoshun/FasterChantDevice/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/)
